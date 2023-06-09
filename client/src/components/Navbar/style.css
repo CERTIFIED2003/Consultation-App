@@ -1,0 +1,14 @@
+.navbar {
+    height: 95px;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.navbar h1 {
+    color: #f51997;
+    font-size: 35px;
+    font-family: 'Share Tech Mono', sans-serif;
+}
