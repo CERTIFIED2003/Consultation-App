@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Raleway&family=Share+Tech+Mono&display=swap&font-display=block');
+
+@font-face {
+    font-family: "digital";
+    src: url("../public/Digital.ttf");
+}
+
+@font-face {
+    font-family: "digitalItalic";
+    src: url("../public/DigitalItalic.ttf");
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+}
+
+a {
+    text-decoration: none;
+}
+
+.content {
+    height: calc(100vh - 95px);
+}
+
+@media (max-width: 550px) {
+    .content {
+        height: calc(100vh - 60px);
+    }
+}
