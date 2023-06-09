@@ -6,7 +6,7 @@ const {
 router.get('/', apiCall);
 router.get("/auth", auth);
 router.get("/create-token", createToken);
-router.post("/create-event", createEvent);
-router.get("/all-events/:userId", getAllEvents);
+router.post("/create-appointment", createEvent);
+router.get("/user/:userId", getAllEvents);
 
 module.exports = router;

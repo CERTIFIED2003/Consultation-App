@@ -1,38 +1,40 @@
 import { useState } from "react";
-import EmailInput from "./EmailInput";
 import { toast } from "react-toastify";
 import axios from "axios";
 import TimezoneSelect from 'react-timezone-select';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { getDay, addMonths, setHours, setMinutes, subDays, addDays } from 'date-fns';
+import moment from 'moment-timezone';
 
 const FormInput = ({ loginUser }) => {
-    const [summary, setSummary] = useState("");
-    const [description, setDescription] = useState("");
+    const [name, setName] = useState("");
     const [timezone, setTimezone] = useState("");
-    const [startDateTime, setStartDateTime] = useState("");
-    const [endDateTime, setEndDateTime] = useState("");
-    const [guests, setGuests] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [startDate, setStartDate] = useState(
+        setHours(setMinutes(new Date(), 0), 10, 0, 0)
+    );
     const [inputState, setInputState] = useState(0);
 
     const handleSubmitForm = (e) => {
         e.preventDefault();
         if (!loginUser) return toast.error("Sign in to your google account first!");
-        if (!summary || !description || !timezone || !startDateTime || !endDateTime || !guests) return toast.warning("Enter all the fields to proceed!");
+        if (!name || !timezone) return toast.warning("Enter all the fields to proceed!");
+
+        const formattedDateTime = moment(startDate).tz(timezone["value"]).format();
 
         setIsLoading(true);
-        axios.post(`${process.env.REACT_APP_BACKEND_URL}/api/create-event`, {
+        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/create-appointment`, {
             userId: loginUser._id,
-            summary,
-            description,
+            name,
+            email: loginUser.email,
             timezone: timezone["value"],
-            startTime: startDateTime,
-            endTime: endDateTime,
-            guests
+            startTime: formattedDateTime,
         })
             .then(res => {
-                toast.success("Added event to your calendar successfully!");
+                toast.success("Appointment booked successfully!");
                 setTimeout(() => {
-                    if (guests.length > 0) toast.success("Also sent invitation mail to guests!");
+                    toast.success("Appointment details added to your Google Calendar!");
                 }, 5000);
             })
             .catch(err => {
@@ -40,63 +42,63 @@ const FormInput = ({ loginUser }) => {
             })
             .finally(() => {
                 setIsLoading(false);
-                setSummary("");
-                setDescription("");
-                setTimezone("");
-                setStartDateTime("");
-                setEndDateTime("");
-                setGuests([]);
+                setInputState(0);
+                setName("");
             });
     };
 
     return (
         <div className="form--wrapper">
             <form onSubmit={handleSubmitForm} className="form--container">
-                {inputState === 0 && <SummaryInput summary={summary} setSummary={setSummary} />}
-                <br />
-                {inputState === 1 && <DescInput description={description} setDescription={setDescription} />}
-                <br />
-                {inputState === 2 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
-                <br />
+                {inputState === 0 && <NameInput name={name} setName={setName} placeholderName={loginUser ? loginUser.name : "Shubham Lal"} />}
+
+                {inputState === 1 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
+
+                {inputState === 2 && <DateTimeInput startDate={startDate} setStartDate={setStartDate} />}
+
+                {inputState === 3 && <DisplayInfo name={name} email={loginUser.email} timezone={timezone} startDate={startDate} />}
+
                 <div className="navigation">
-                    <button disabled={inputState === 0} type="button" onClick={() => inputState > 0 && setInputState(prev => prev - 1)}>
-                        Previous
-                    </button>
-                    <button type="button" onClick={() => setInputState(prev => prev + 1)}>
-                        Next
-                    </button>
+                    <div>
+                        {inputState > 0 && (
+                            <button type="button" onClick={() => inputState > 0 && setInputState(prev => prev - 1)}>
+                                Previous
+                            </button>
+                        )}
+                    </div>
+                    <div>
+                        {inputState < 3 && (
+                            <button type="button" onClick={() => {
+                                if (inputState === 0 && !name) return toast.warn("Enter your full name to proceed!");
+                                if (inputState === 1 && !timezone) return toast.warn("Select your local timezone to proceed!");
+                                setInputState(prev => prev + 1)
+                            }}>
+                                Next
+                            </button>
+                        )}
+                        {inputState === 3 && (
+                            <button type="submit">
+                                {isLoading ? "Booking" : "Book"}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </form>
         </div>
     )
 };
 
-const SummaryInput = ({ summary, setSummary }) => {
+const NameInput = ({ name, setName, placeholderName }) => {
     return (
         <div>
-            <label htmlFor="summary">Summary</label>
+            <label htmlFor="name">Your Full Name</label>
             <br />
             <input
                 type="text"
-                id="summary"
-                placeholder="Enter topic title"
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-            />
-        </div>
-    );
-};
-
-const DescInput = ({ description, setDescription }) => {
-    return (
-        <div>
-            <label htmlFor="desc">Description</label>
-            <br />
-            <textarea
-                id="desc"
-                placeholder="Enter topic description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                id="name"
+                placeholder={placeholderName}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
             />
         </div>
     );
@@ -115,5 +117,56 @@ const TimezoneInput = ({ timezone, setTimezone }) => {
         </div>
     );
 };
+
+const DateTimeInput = ({ startDate, setStartDate }) => {
+    const isWeekday = (date) => {
+        const day = getDay(date);
+        return day !== 0 && day !== 6;
+    };
+    return (
+        <DatePicker
+            selected={startDate}
+            includeDateIntervals={[
+                { start: subDays(new Date(), 0), end: addDays(new Date(), 60) },
+            ]}
+            onChange={(date) => setStartDate(date)}
+            minDate={new Date()}
+            maxDate={addMonths(new Date(), 2)}
+            dateFormat="MMMM d, yyyy h:mm aa"
+            filterDate={isWeekday}
+            showTimeSelect
+            timeIntervals={60}
+            minTime={setHours(setMinutes(new Date(), 0), 10, 0, 0)}
+            maxTime={setHours(setMinutes(new Date(), 30), 16, 0, 0)}
+            inline
+            fixedHeight
+        />
+    );
+};
+
+const DisplayInfo = ({ name, email, timezone, startDate }) => {
+    const formattedDate = `${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+    return (
+        <div>
+            <div>
+                <span>Name: </span>
+                <span>{name}</span>
+            </div>
+            <div>
+                <span>Email: </span>
+                <span>{email}</span>
+            </div>
+            <div>
+                <span>Timezone: </span>
+                <span>{timezone["value"]}</span>
+            </div>
+            <div>
+                <span>Appointment: </span>
+                <span>{formattedDate}</span>
+            </div>
+        </div>
+    )
+}
 
 export default FormInput

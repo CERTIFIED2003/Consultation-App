@@ -1,9 +1,10 @@
 const { google } = require("googleapis");
 const axios = require("axios");
 const User = require("../models/User.js");
-const Meeting = require("../models/Meeting.js");
+const Appointment = require("../models/Appointment.js");
 const { v4 } = require("uuid");
 const mongoose = require("mongoose");
+const { addMinutes } = require("../helpers/time.js");
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
@@ -20,7 +21,7 @@ exports.auth = async (req, res) => {
         const scopes = [
             'profile',
             'email',
-            'https://www.googleapis.com/auth/calendar'
+            'https://www.googleapis.com/auth/calendar',
         ];
 
         const url = oauth2Client.generateAuthUrl({
@@ -82,37 +83,36 @@ exports.createEvent = async (req, res) => {
     try {
         const {
             userId,
-            summary,
-            description,
+            name,
+            email,
             timezone,
-            startTime,
-            endTime,
-            guests
+            startTime
         } = req.body;
 
         const user = await User.findById(userId);
         if (!user) return res.send("User not found");
+
+        const endTime = addMinutes(startTime);
+        console.log(endTime);
 
         const calendar = google.calendar({
             version: "v3",
             auth: process.env.API_KEY
         });
 
-        const localStartTime = new Date(startTime).toLocaleTimeString();
-        const localEndTime = new Date(endTime).toLocaleTimeString();
         const response = await calendar.events.insert({
             auth: oauth2Client,
             calendarId: "primary",
             conferenceDataVersion: 1,
             requestBody: {
-                summary: `${summary} | Event Schedule: ${localStartTime} to ${localEndTime} (${timezone})`,
-                description: description,
+                summary: `Appointment with Udemy`,
+                description: `Appointment booked by ${name}`,
                 start: {
-                    dateTime: new Date(startTime).toISOString(),
+                    dateTime: startTime,
                     timeZone: timezone,
                 },
                 end: {
-                    dateTime: new Date(endTime).toISOString(),
+                    dateTime: endTime,
                     timeZone: timezone,
                 },
                 conferenceData: {
@@ -120,39 +120,39 @@ exports.createEvent = async (req, res) => {
                         requestId: v4(),
                     },
                 },
-                attendees: guests,
-            }
+                attendees: [
+                    { email: "udemy.awesome@gmail.com" },
+                ],
+            },
         });
 
-        const meetingData = {
+        // organizer: {
+        //     displayName: "Shubham Lal",
+        //     email: "shubhamlal.new@gmail.com";
+        //     id: string,
+        //     self: boolean,
+        // },
+
+        const appointmentData = {
             _id: new mongoose.Types.ObjectId(),
             creatorId: userId,
-            summary: summary,
-            description: description,
+            name: name,
+            attendee: email,
             timeZone: timezone,
-            start: new Date(startTime).toISOString(),
-            end: new Date(endTime).toISOString(),
-            organizer: {
-                name: user.name,
-                email: user.email,
-            },
-            attendees: guests
+            start: startTime,
+            end: endTime,
         };
 
         const filter = {
             "start": startTime,
             "end": endTime,
-            organizer: {
-                name: user.name,
-                email: user.email,
-            },
         };
-        await Meeting.findOneAndUpdate(filter, meetingData, {
+        await Appointment.findOneAndUpdate(filter, appointmentData, {
             upsert: true,
             new: true,
         });
         await User.findByIdAndUpdate(userId, {
-            $addToSet: { meetings: meetingData._id },
+            $addToSet: { appointments: appointmentData._id },
         });
 
         res.status(200).send({ response });
@@ -167,17 +167,16 @@ exports.getAllEvents = async (req, res) => {
         const userId = req.params.userId;
         let user = await User.findById(userId);
         if (!user) return res.send("User not found");
-        let meetingsData = [];
+        let appointmentsData = [];
 
-        const populateUser = await User.findById(userId).populate("meetings");
-        meetingsData = populateUser.meetings.map((meeting) => ({
+        const populateUser = await User.findById(userId).populate("appointments");
+        appointmentsData = populateUser.appointments.map((meeting) => ({
             timezone: meeting.timeZone,
-            start: new Date(meeting.start).toISOString(),
-            end: new Date(meeting.end).toISOString(),
-            attendee: meeting.attendees,
+            start: meeting.start,
+            end: meeting.end,
         }));
 
-        res.status(200).send({ meetingsData });
+        res.status(200).send({ appointmentsData });
     }
     catch (error) {
         console.log(error);

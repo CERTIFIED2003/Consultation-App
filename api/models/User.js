@@ -17,9 +17,9 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    meetings: [{
+    appointments: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Meeting'
+        ref: 'Appointment'
     }]
 });
 
