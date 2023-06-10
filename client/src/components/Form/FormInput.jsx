@@ -9,6 +9,7 @@ import moment from 'moment-timezone';
 
 const FormInput = ({ loginUser }) => {
     const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
     const [timezone, setTimezone] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState(
@@ -27,7 +28,7 @@ const FormInput = ({ loginUser }) => {
         axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/create-appointment`, {
             userId: loginUser._id,
             name,
-            email: loginUser.email,
+            email,
             timezone: timezone["value"],
             startTime: formattedDateTime,
         })
@@ -52,11 +53,13 @@ const FormInput = ({ loginUser }) => {
             <form onSubmit={handleSubmitForm} className="form--container">
                 {inputState === 0 && <NameInput name={name} setName={setName} placeholderName={loginUser ? loginUser.name : "Shubham Lal"} />}
 
-                {inputState === 1 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
+                {inputState === 1 && <EmailInput email={email} setEmail={setEmail} placeholderName={loginUser ? loginUser.email : "im.shubhamlal@gmail.com"} />}
 
-                {inputState === 2 && <DateTimeInput startDate={startDate} setStartDate={setStartDate} />}
+                {inputState === 2 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
 
-                {inputState === 3 && <DisplayInfo name={name} email={loginUser.email} timezone={timezone} startDate={startDate} />}
+                {inputState === 3 && <DateTimeInput startDate={startDate} setStartDate={setStartDate} />}
+
+                {inputState === 4 && <DisplayInfo name={name} email={loginUser.email} timezone={timezone} startDate={startDate} />}
 
                 <div className="navigation">
                     <div>
@@ -67,16 +70,17 @@ const FormInput = ({ loginUser }) => {
                         )}
                     </div>
                     <div>
-                        {inputState < 3 && (
+                        {inputState < 4 && (
                             <button type="button" onClick={() => {
                                 if (inputState === 0 && !name) return toast.warn("Enter your full name to proceed!");
-                                if (inputState === 1 && !timezone) return toast.warn("Select your local timezone to proceed!");
+                                if (inputState === 1 && !name) return toast.warn("Enter your email to proceed!");
+                                if (inputState === 2 && !timezone) return toast.warn("Select your local timezone to proceed!");
                                 setInputState(prev => prev + 1)
                             }}>
                                 Next
                             </button>
                         )}
-                        {inputState === 3 && (
+                        {inputState === 4 && (
                             <button type="submit">
                                 {isLoading ? "Booking" : "Book"}
                             </button>
@@ -99,6 +103,22 @@ const NameInput = ({ name, setName, placeholderName }) => {
                 placeholder={placeholderName}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+            />
+        </div>
+    );
+};
+
+const EmailInput = ({ email, setEmail, placeholderEmail }) => {
+    return (
+        <div>
+            <label htmlFor="email">Your Email Address</label>
+            <br />
+            <input
+                type="email"
+                id="email"
+                placeholder={placeholderEmail}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
             />
         </div>
     );

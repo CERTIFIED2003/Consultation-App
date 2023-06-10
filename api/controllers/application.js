@@ -6,10 +6,31 @@ const { v4 } = require("uuid");
 const mongoose = require("mongoose");
 const { addMinutes } = require("../helpers/time.js");
 
+const CREDENTIALS = JSON.parse(process.env.CREDENTIALS);
+const calendarId = process.env.CALENDAR_ID;
+
 const oauth2Client = new google.auth.OAuth2(
     process.env.CLIENT_ID,
     process.env.CLIENT_SECRET,
     process.env.REDIRECT_URL
+);
+
+const calendar = google.calendar({
+    version: "v3",
+    auth: process.env.API_KEY
+});
+
+const SCOPES = [
+    'profile',
+    'email',
+    'https://www.googleapis.com/auth/calendar',
+];
+
+const auth = new google.auth.JWT(
+    CREDENTIALS.client_email,
+    null,
+    CREDENTIALS.private_key,
+    SCOPES
 );
 
 exports.apiCall = async (req, res) => {
@@ -93,20 +114,14 @@ exports.createEvent = async (req, res) => {
         if (!user) return res.send("User not found");
 
         const endTime = addMinutes(startTime);
-        console.log(endTime);
-
-        const calendar = google.calendar({
-            version: "v3",
-            auth: process.env.API_KEY
-        });
 
         const response = await calendar.events.insert({
-            auth: oauth2Client,
-            calendarId: "primary",
+            auth: auth, // <--------------------------------------- Changed here
+            calendarId: calendarId, // <--------------------------- Changed here
             conferenceDataVersion: 1,
             requestBody: {
-                summary: `Appointment with Udemy`,
-                description: `Appointment booked by ${name}`,
+                summary: `Appointment with Dr. Shubham`,
+                description: `Appointment booked by ${name} @${email}`,
                 start: {
                     dateTime: startTime,
                     timeZone: timezone,
@@ -120,19 +135,13 @@ exports.createEvent = async (req, res) => {
                         requestId: v4(),
                     },
                 },
-                attendees: [
-                    { email: "udemy.awesome@gmail.com" },
-                ],
+                // attendees: [
+                //     { email: email },
+                // ],
             },
         });
 
-        // organizer: {
-        //     displayName: "Shubham Lal",
-        //     email: "shubhamlal.new@gmail.com";
-        //     id: string,
-        //     self: boolean,
-        // },
-
+        // Addind data to MongoDB
         const appointmentData = {
             _id: new mongoose.Types.ObjectId(),
             creatorId: userId,
@@ -142,7 +151,6 @@ exports.createEvent = async (req, res) => {
             start: startTime,
             end: endTime,
         };
-
         const filter = {
             "start": startTime,
             "end": endTime,
@@ -182,3 +190,10 @@ exports.getAllEvents = async (req, res) => {
         console.log(error);
     }
 };
+
+// organizer: {
+//     displayName: "Shubham Lal",
+//     email: "shubhamlal.new@gmail.com";
+//     id: string,
+//     self: boolean,
+// },
