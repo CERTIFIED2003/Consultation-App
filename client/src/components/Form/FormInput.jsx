@@ -8,8 +8,9 @@ import { getDay, addMonths, setHours, setMinutes, subDays, addDays } from 'date-
 import moment from 'moment-timezone';
 
 const FormInput = ({ loginUser }) => {
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
+    const [name, setName] = useState("Shubham Lal");
+    const [email, setEmail] = useState("im.shubhamlal@gmail.com");
+    const [phone, setPhone] = useState("9163161834");
     const [timezone, setTimezone] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [startDate, setStartDate] = useState(
@@ -25,10 +26,11 @@ const FormInput = ({ loginUser }) => {
         const formattedDateTime = moment(startDate).tz(timezone["value"]).format();
 
         setIsLoading(true);
-        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/create-appointment`, {
+        axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/create-appointment`, {
             userId: loginUser._id,
             name,
             email,
+            phone,
             timezone: timezone["value"],
             startTime: formattedDateTime,
         })
@@ -53,13 +55,15 @@ const FormInput = ({ loginUser }) => {
             <form onSubmit={handleSubmitForm} className="form--container">
                 {inputState === 0 && <NameInput name={name} setName={setName} placeholderName={loginUser ? loginUser.name : "Shubham Lal"} />}
 
-                {inputState === 1 && <EmailInput email={email} setEmail={setEmail} placeholderName={loginUser ? loginUser.email : "im.shubhamlal@gmail.com"} />}
+                {inputState === 1 && <EmailInput email={email} setEmail={setEmail} placeholderEmail={loginUser ? loginUser.email : "im.shubhamlal@gmail.com"} />}
 
-                {inputState === 2 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
+                {inputState === 2 && <PhoneInput phone={phone} setPhone={setPhone} />}
 
-                {inputState === 3 && <DateTimeInput startDate={startDate} setStartDate={setStartDate} />}
+                {inputState === 3 && <TimezoneInput timezone={timezone} setTimezone={setTimezone} />}
 
-                {inputState === 4 && <DisplayInfo name={name} email={loginUser.email} timezone={timezone} startDate={startDate} />}
+                {inputState === 4 && <DateTimeInput startDate={startDate} setStartDate={setStartDate} />}
+
+                {inputState === 5 && <DisplayInfo name={name} email={email} phone={phone} timezone={timezone} startDate={startDate} />}
 
                 <div className="navigation">
                     <div>
@@ -70,17 +74,18 @@ const FormInput = ({ loginUser }) => {
                         )}
                     </div>
                     <div>
-                        {inputState < 4 && (
+                        {inputState < 5 && (
                             <button type="button" onClick={() => {
                                 if (inputState === 0 && !name) return toast.warn("Enter your full name to proceed!");
                                 if (inputState === 1 && !name) return toast.warn("Enter your email to proceed!");
-                                if (inputState === 2 && !timezone) return toast.warn("Select your local timezone to proceed!");
+                                if (inputState === 2 && !name) return toast.warn("Enter your phone no. to proceed!");
+                                if (inputState === 3 && !timezone) return toast.warn("Select your local timezone to proceed!");
                                 setInputState(prev => prev + 1)
                             }}>
                                 Next
                             </button>
                         )}
-                        {inputState === 4 && (
+                        {inputState === 5 && (
                             <button type="submit">
                                 {isLoading ? "Booking" : "Book"}
                             </button>
@@ -119,6 +124,22 @@ const EmailInput = ({ email, setEmail, placeholderEmail }) => {
                 placeholder={placeholderEmail}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+            />
+        </div>
+    );
+};
+
+const PhoneInput = ({ phone, setPhone }) => {
+    return (
+        <div>
+            <label htmlFor="phone">Your Phone Number</label>
+            <br />
+            <input
+                type="number"
+                id="phone"
+                placeholder="9163161834"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
             />
         </div>
     );
@@ -164,7 +185,7 @@ const DateTimeInput = ({ startDate, setStartDate }) => {
     );
 };
 
-const DisplayInfo = ({ name, email, timezone, startDate }) => {
+const DisplayInfo = ({ name, email, phone, timezone, startDate }) => {
     const formattedDate = `${startDate.getDate()}/${startDate.getMonth() + 1}/${startDate.getFullYear()}, ${startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
     return (
@@ -176,6 +197,10 @@ const DisplayInfo = ({ name, email, timezone, startDate }) => {
             <div>
                 <span>Email: </span>
                 <span>{email}</span>
+            </div>
+            <div>
+                <span>Phone: </span>
+                <span>{phone}</span>
             </div>
             <div>
                 <span>Timezone: </span>

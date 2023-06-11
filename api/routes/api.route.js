@@ -4,9 +4,9 @@ const {
 } = require("../controllers/application.js");
 
 router.get('/', apiCall);
-router.get("/auth", auth);
-router.get("/create-token", createToken);
-router.post("/create-appointment", createEvent);
-router.get("/user/:userId", getAllEvents);
+router.get("/v1/auth", auth);
+router.get("/v1/create-token", createToken);
+router.post("/v1/create-appointment", createEvent);
+router.get("/v1/user/:userId", getAllEvents);
 
 module.exports = router;

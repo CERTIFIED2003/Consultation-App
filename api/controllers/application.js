@@ -106,6 +106,7 @@ exports.createEvent = async (req, res) => {
             userId,
             name,
             email,
+            phone,
             timezone,
             startTime
         } = req.body;
@@ -115,9 +116,9 @@ exports.createEvent = async (req, res) => {
 
         const endTime = addMinutes(startTime);
 
-        const response = await calendar.events.insert({
-            auth: auth, // <--------------------------------------- Changed here
-            calendarId: calendarId, // <--------------------------- Changed here
+        const buyerResponse = await calendar.events.insert({
+            auth: oauth2Client,
+            calendarId: "primary",
             conferenceDataVersion: 1,
             requestBody: {
                 summary: `Appointment with Dr. Shubham`,
@@ -132,28 +133,50 @@ exports.createEvent = async (req, res) => {
                 },
                 conferenceData: {
                     createRequest: {
+                        conferenceSolutionKey: {
+                            type: 'hangoutsMeet',
+                        },
                         requestId: v4(),
                     },
                 },
-                // attendees: [
-                //     { email: email },
-                // ],
+                attendees: [
+                    { email: email }
+                ],
+                guestsCanSeeOtherGuests: false,
+                guestsCanModify: false,
+            },
+        });
+        const meetId = buyerResponse.data.conferenceData.conferenceId;
+        const meetLink = `https://meet.google.com/${meetId}`;
+
+        const sellerResponse = await calendar.events.insert({
+            auth: auth,
+            calendarId: calendarId,
+            requestBody: {
+                summary: `Appointment with ${name}`,
+                description: `Google Meet Link ${meetLink}`,
+                start: {
+                    dateTime: startTime,
+                    timeZone: timezone,
+                },
+                end: {
+                    dateTime: endTime,
+                    timeZone: timezone,
+                },
             },
         });
 
-        // Addind data to MongoDB
+        // Adding data to MongoDB
         const appointmentData = {
             _id: new mongoose.Types.ObjectId(),
-            creatorId: userId,
-            name: name,
-            attendee: email,
-            timeZone: timezone,
-            start: startTime,
-            end: endTime,
+            phone: phone,
+            meetLink: meetLink,
+            ...sellerResponse.data
         };
         const filter = {
             "start": startTime,
             "end": endTime,
+            organizer: user.name,
         };
         await Appointment.findOneAndUpdate(filter, appointmentData, {
             upsert: true,
@@ -163,7 +186,7 @@ exports.createEvent = async (req, res) => {
             $addToSet: { appointments: appointmentData._id },
         });
 
-        res.status(200).send({ response });
+        res.status(200).send({ buyerResponse });
     }
     catch (error) {
         console.log(error);
